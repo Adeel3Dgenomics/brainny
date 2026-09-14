@@ -307,9 +307,10 @@ brainny recent --days 7          # what you've captured lately
   no central folder is set up yet, ask whether you want one (and where,
   and whether to back it with GitHub) before ever touching anything;
   never asks again after that, whatever you answered;
-- quietly scan the last ~25 minutes of conversation for anything worth
-  keeping, and file it without interrupting you — most cycles catch
-  nothing, and that's correct;
+- quietly scan whatever just happened for anything worth keeping,
+  appended to the end of each task/turn — never a separately-scheduled
+  interruption mid-task — and file it without interrupting you; most
+  cycles catch nothing, and that's correct;
 - once, at the start of the session, check whether anything's drifted
   from your shared central brain and ask before syncing it;
 - once per session, give the project's already-captured ideas one free
@@ -330,7 +331,7 @@ moment, every time.
 | Command | Runs | What it does |
 |---|---|---|
 | `/brainny` | manually, end of a session | full two-pass review of the whole session (project-aware + project-blind) |
-| `/brainny-catch` | manually, or every ~25 min in the background | lightweight scan of the last ~25 min for anything worth keeping; silent when it finds nothing |
+| `/brainny-catch` | manually, or appended to the end of every task/turn | lightweight scan of what just happened for anything worth keeping; silent when it finds nothing; never runs as a separate interrupting wakeup |
 | `/brainny-catch-this <description>` | manually, whenever you point at something | searches the *whole* session for what you describe and captures it; always tells you what it did |
 | `/brainny-catch-skill <description>` | manually, whenever you point at a reusable procedure | same as above, but captures `kind: skill` and attaches evidence (code/plot/table) via `brainny attach` |
 | `/brainny-sync-check` | automatically, once per session | checks for local drift and for an overdue GitHub push, asking before either |

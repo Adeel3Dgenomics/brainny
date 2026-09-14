@@ -3,9 +3,21 @@
 The quick, cheap sibling of the full capture skill (project-local
 `skills/brainny/SKILL.md`, invoked as `/brainny`). You run when the user
 types `/brainny-catch`, or — per the "brAInny ambient capture" section of
-this user's global CLAUDE.md — automatically, on a standing ~25 minute
-loop, without the user typing anything. Nothing about your behavior
-changes between those two triggers; only what calls you differs.
+this user's global CLAUDE.md — automatically, **appended to the end of
+each task/turn**, once you've fully finished whatever was actually asked.
+Nothing about your behavior changes between those two triggers; only what
+calls you differs.
+
+**Why "end of task," not a timer.** This used to run on a standing
+~25-minute background loop (`Skill({skill: "loop", args: "25m
+/brainny-catch"})`). A real user hit a real problem with that: the loop
+fires as a scheduled wakeup in the *same* session, which means it can
+land in the middle of active work and take over that turn — the original
+task doesn't reliably resume afterward. Running this at the natural end
+of a turn instead — the same turn, tacked on right before handing control
+back, never a separate injected one — makes that failure mode structurally
+impossible: there is no "mid-task" to land in, because it only ever runs
+once a task is already done.
 
 ## What makes this "lightweight," not just a smaller `/brainny`
 
@@ -14,8 +26,8 @@ changes between those two triggers; only what calls you differs.
 - **One pass, not two**: run only the project-aware precision pass (below).
   Skip the project-blind "off-topic tangent" pass entirely — that recall-
   oriented sweep belongs to the full end-of-session `/brainny` review, which
-  can afford to look at everything at once. Catch fires every ~25 minutes;
-  it has to stay cheap.
+  can afford to look at everything at once. This runs at the end of every
+  task, potentially many times a session — it has to stay cheap.
 - **Silent by default**: emitting nothing is the common, correct outcome —
   say NOTHING when you find nothing. Do not report "checked, nothing found"
   every cycle. If this got chatty, the user would turn it off.
@@ -23,6 +35,12 @@ changes between those two triggers; only what calls you differs.
   `/brainny-catch` or `/brainny`) — you're only looking at the slice since
   the last catch, so this should rarely come up, but if the recent slice
   overlaps a prior one, don't re-emit the same idea.
+- **Skip it for trivial turns.** If the task you just finished was too
+  small to plausibly contain anything catch-worthy (a one-line answer, a
+  single file read, anything with no real technique/precaution/solution/
+  insight in play), don't bother running the pass at all — go straight to
+  silence. This keeps "every task" from meaning "constant low-value
+  scanning" on tiny back-and-forth turns.
 
 ## Which project this captures into
 Run `brainny capture` from the current project's own working directory —

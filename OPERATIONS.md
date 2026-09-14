@@ -1344,5 +1344,47 @@ permission-gated local check — see above.
       Verified the toggle visually with headless Chrome (dispatches a
       click, confirms the active/gold state applies).
 
+34. Fix: the ambient catch loop was interrupting in-progress work. ✅
+    - Real user report: "why brainny run the time catch every 30 minutes
+      or so it actually stop the AI from doing what he was doing... if
+      the AI was doing something, and brainny was called it does not
+      continue!!" Root cause: `brainny-catch` had run on a recurring
+      ~25-minute background loop since step 6
+      (`Skill({skill: "loop", args: "25m /brainny-catch"})`) -- that
+      loop fires as a scheduled wakeup *in the same session*, which can
+      land in the middle of active work and take over that turn, with
+      the original task not reliably resuming afterward. This is a real
+      operational cost the design hadn't accounted for; the user
+      explicitly wanted it never interrupting anything, not just less
+      frequently.
+    - User's own proposed fix, verbatim: append `brainny-catch` to the
+      end of whatever command/task is already running -- "do this + run
+      brainny" -- rather than firing on its own wall-clock timer at all.
+      This is structurally better than the interval-based loop: there is
+      no "mid-task" left for it to land in, because it only ever runs
+      once a task is already finished, in the SAME turn, not a separate
+      injected one.
+    - `skills/brainny/catch.md` (+ global mirror) rewritten: the trigger
+      description changed from "a standing ~25 minute loop" to "appended
+      to the end of each task/turn," with the reasoning kept inline (a
+      future editor of this file needs to know *why* it isn't a loop
+      anymore, not just that it isn't). Added one new discipline this
+      trigger model needs that the old one didn't: skip the pass
+      entirely for a turn too trivial to plausibly contain anything
+      catch-worthy, so "every task" doesn't become "constant low-value
+      scanning" on small back-and-forth turns.
+    - `~/.claude/CLAUDE.md` (not tracked in this repo -- global user
+      config): step 2 of the ambient-capture section rewritten to match,
+      with the old loop-based mechanism and the reason it changed kept
+      in a parenthetical for anyone reading the file cold later. Added a
+      matching guardrail bullet. The other ambient steps
+      (onboarding/sync-check/propose-check/recall) were already one-time
+      session-start checks, never loop-based, so none of them share this
+      failure mode and none needed to change.
+    - README updated (the ambient-behavior bullet list and the command
+      table's `/brainny-catch` row both described the retired loop
+      timing). No Python/CLI/schema changes -- purely skill-instruction
+      and global-config wording, so no test suite impact.
+
 Each step should land, get tested, and get dogfooded (per SEED.md §6
 Layer 7) before the next starts — same discipline as the v0 build.
