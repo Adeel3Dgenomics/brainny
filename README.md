@@ -270,7 +270,8 @@ is a single self-contained file — no server, works offline:
 brainny status              # counts, domains, last capture, sync state
 brainny query                # your ideas as a terminal tree, no browser needed
 brainny query --html          # just (re)write brainny-out/graph.html, without opening it
-brainny open --central          # open the central folder's copy of this project instead
+brainny open --central          # this project's central copy -- or, from a directory with no
+                                #   local graph to infer a project from, the merged view of everything
 brainny open --central --project X  # ...or an explicit project's central copy, from anywhere
 brainny search "docker"        # find anything by keyword, tag, domain, kind
 brainny recall retry api client  # search THIS project + every project in your central folder

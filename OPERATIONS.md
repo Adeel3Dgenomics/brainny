@@ -1227,5 +1227,31 @@ permission-gated local check — see above.
       prompted this bug report in the first place, not a side effect of
       anything run here).
 
+31. Fix: `brainny open --central` erroring instead of showing everything. ✅
+    - The very next thing the user hit, following step 30's own
+      suggested fix verbatim: ran `brainny open --central` from their
+      home directory (no local graph there to infer a project from) and
+      got `couldn't infer a project name from the local graph - pass one
+      explicitly`. Root cause: `open --central` (open ONE project's
+      central copy, inferred from the local graph or given via
+      `--project`) and `central --html --open` (open the MERGED view
+      across every project) are two different existing commands that
+      both use "central" -- and "open central" with nothing more
+      specific to go on is a completely reasonable thing to expect means
+      "show me my whole central brain," not "guess which one project I
+      meant."
+    - Fix: when `open --central` can't infer a project (no `--project`
+      given, no local graph to infer one from), it now falls back to the
+      merged view across every synced project -- the same
+      `build_merged_graph()`/`build_merged_opportunities()`/`save_html()`
+      sequence `brainny central --open` already uses -- instead of
+      erroring. Passing `--project X` explicitly still narrows to one
+      project's own copy exactly as before; nothing about the existing,
+      useful "quick-jump to this project's own central copy" behavior
+      changed when a project CAN be inferred.
+    - New test
+      `test_open_central_falls_back_to_merged_view_when_no_project_inferrable`
+      -- 144 tests total.
+
 Each step should land, get tested, and get dogfooded (per SEED.md §6
 Layer 7) before the next starts — same discipline as the v0 build.

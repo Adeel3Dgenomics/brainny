@@ -448,15 +448,31 @@ def cmd_open(args: argparse.Namespace) -> int:
         if not central:
             print("brainny: no central folder configured - run `brainny config set-central <path>` first.", file=sys.stderr)
             return 1
+        central_root = Path(central)
         project = args.project or _infer_project_name(load_graph(out_dir))
         if not project:
-            print(
-                "brainny: couldn't infer a project name from the local graph - pass one explicitly: "
-                "`brainny open --central --project <name>`.",
-                file=sys.stderr,
-            )
-            return 1
-        path = html_path(Path(central) / project)
+            # No single project to jump to (most commonly: run from a
+            # directory with no local graph at all, e.g. the home
+            # directory) -- "open central" with nothing more specific
+            # almost always means "show me everything", so fall back to
+            # the merged view across every synced project instead of
+            # erroring and making the user guess a --project value.
+            projects = central_module.list_central_projects(central_root)
+            if not projects:
+                print(
+                    f"brainny: no projects synced into {central_root} yet - run `brainny sync` from a project first.",
+                    file=sys.stderr,
+                )
+                return 1
+            merged = central_module.build_merged_graph(central_root)
+            merged_opportunities = central_module.build_merged_opportunities(central_root)
+            if merged_opportunities.items:
+                save_opportunities(merged_opportunities, central_root)
+            path = save_html(merged, central_root, title="brainny — central")
+            webbrowser.open(path.resolve().as_uri())
+            print(f"brainny: opened {path} (merged: {len(merged.nodes)} idea(s) across {len(projects)} project(s))")
+            return 0
+        path = html_path(central_root / project)
         if not path.exists():
             print(
                 f"brainny: {path} doesn't exist yet - run `brainny sync` from the '{project}' project first.",

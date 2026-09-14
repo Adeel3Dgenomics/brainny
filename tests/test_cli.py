@@ -286,6 +286,32 @@ def test_open_central_fails_cleanly_when_not_configured(tmp_path, capsys, isolat
     assert "no central folder configured" in capsys.readouterr().err
 
 
+def test_open_central_falls_back_to_merged_view_when_no_project_inferrable(tmp_path, capsys, isolated_config, monkeypatch):
+    # a real user hit this: ran `brainny open --central` from a directory
+    # with no local graph at all (their home directory) -- it used to
+    # error asking for an explicit --project, which is exactly backwards
+    # from what "open central" means when you have nothing more specific
+    # to go on: show everything, not force a guess at one project's name.
+    central = tmp_path / "central"
+    capture(FIXTURES / "sample_entries.json", project="projA", session="s1", out_dir=central / "projA")
+    capture(FIXTURES / "sample_entries.json", project="projB", session="s1", out_dir=central / "projB")
+    main(["config", "set-central", str(central)])
+    capsys.readouterr()
+
+    opened = {}
+    monkeypatch.setattr("webbrowser.open", lambda url: opened.setdefault("url", url))
+
+    # --out-dir points somewhere with no local graph -- nothing to infer a
+    # project name from
+    code = main(["--out-dir", str(tmp_path / "nowhere"), "open", "--central"])
+    assert code == 0
+    assert opened["url"].startswith("file:")
+    out = capsys.readouterr().out
+    assert "merged" in out
+    assert "2 project(s)" in out
+    assert (central / "graph.html").exists()
+
+
 def test_open_central_fails_cleanly_when_project_has_no_central_copy(tmp_path, capsys, isolated_config):
     out_dir = tmp_path / "out"
     capture(FIXTURES / "sample_entries.json", project="myproj", session="s1", out_dir=out_dir)
