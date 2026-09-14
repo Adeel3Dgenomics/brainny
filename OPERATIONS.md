@@ -1253,5 +1253,53 @@ permission-gated local check — see above.
       `test_open_central_falls_back_to_merged_view_when_no_project_inferrable`
       -- 144 tests total.
 
+32. `/brainny-extract` — mine ideas out of existing repos, not just live sessions. ✅
+    - User's ask: brainny should be able to work across several existing
+      GitHub repos the user already has, reading the code itself to pull
+      out reusable ideas and feed them into the idea network -- an
+      explicitly acknowledged-as-expensive "idea extractor" mode, wanted
+      specifically to find *unique and informative* ideas, not just
+      anything.
+    - This needed zero Python/schema changes -- same architectural shape
+      as `synthesize`/`propose-check`: the actual work (reading code,
+      judging what's genuinely reusable) is inherently a semantic task
+      only an assistant can do, so it's a pure skill that shells out to
+      the CLI surface that already exists (`brainny capture <entries.json>
+      --project <name> --session <id>`), same as every other capture
+      path. New `skills/brainny/extract.md` (+ global mirror
+      `~/.claude/skills/brainny-extract/SKILL.md`), triggered manually via
+      `/brainny-extract <path>` -- never ambient, given the cost.
+    - `<path>` is either one repo or a directory of several (each
+      becomes its own project, matched by directory name, skipping
+      anything that isn't actually a git repo). Explicit cost-budgeting
+      instructions baked into the skill itself, since "expensive" was the
+      user's own framing: README/CHANGELOG/commit-history first, `git
+      log` grepped for fix/workaround/gotcha-flavored commits, `Grep` for
+      hard-won-knowledge comment markers (`NOTE:`, `WARNING:`, `HACK:`,
+      `workaround`, `gotcha`), a handful of the most-substantial or most-
+      changed files -- explicitly NOT an exhaustive per-file read, and
+      the budget applies per-repo so a directory of many repos doesn't
+      silently multiply into an enormous pass without checking in first.
+    - The GATE (same default-NO discipline as every capture skill) is
+      re-explained for the specific case of reading finished code cold
+      rather than watching a live conversation -- reject "uses library X"
+      or anything that just restates a docstring; only genuinely
+      transferable, non-obvious techniques/precautions/solutions/
+      insights/skills, grounded in something real and pointable-to (a
+      specific file, comment, or commit), never invented because a repo
+      "probably" has something like it.
+    - `origin` defaults to unset for everything this skill captures,
+      called out explicitly: unlike a live session, you generally can't
+      tell whether a human or an AI wrote a given piece of already-
+      existing code just by reading it, so guessing from style or naming
+      conventions is explicitly forbidden -- only set it on real,
+      specific signal (an explicit disclaimer, a `git blame`/commit
+      pattern actually pointed to).
+    - Wired into `~/.claude/CLAUDE.md`'s manual-trigger section
+      (alongside `catch-this`/`catch-skill`/`synthesize`, all of which
+      share the same "always respond, never silent" contract on a direct
+      request) and the "Full skill instructions" mapping list. No CLI/
+      test changes -- purely new skill files plus README/this doc.
+
 Each step should land, get tested, and get dogfooded (per SEED.md §6
 Layer 7) before the next starts — same discipline as the v0 build.

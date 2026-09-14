@@ -248,6 +248,22 @@ propose nothing at all, same GATE discipline as every other capture skill:
 brainny propose opportunities.json --project myproj --session s1
 ```
 
+**Mine ideas out of repos you already have, no live session needed:**
+**`/brainny-extract <path>`** points brainny backward instead of forward
+— at code someone already wrote, possibly years ago, with no AI session
+attached to it at all — and reads through it cold for the same kinds of
+techniques, precautions, solutions, and insights every other capture
+skill looks for. `<path>` can be one repo, or a directory containing
+several (each one becomes its own project, same as if you'd captured
+from inside it directly). This is genuinely expensive (it's really
+reading real code) and entirely on-demand — it never runs on its own,
+and it budgets its own effort (README/CHANGELOG/commit history and
+targeted searches for hard-won-knowledge comments first, a handful of
+substantial files, never an exhaustive read of everything) rather than
+treating "more repos" as "proportionally more work." Same GATE
+discipline as everywhere else: most files, and even most whole repos,
+should yield nothing.
+
 **2. See what you've kept:**
 
 ```bash
