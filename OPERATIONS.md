@@ -1386,5 +1386,62 @@ permission-gated local check — see above.
       timing). No Python/CLI/schema changes -- purely skill-instruction
       and global-config wording, so no test suite impact.
 
+35. Fix: a brand-new user got none of the ambient behavior, only the
+    manual slash commands, with no indication anything was missing. ✅
+    - Real user question, after step 34: "so the user who will use
+      brainny, will it run correctly and scan for new ideas or not."
+      Investigating turned up a real gap: the entire "brAInny ambient
+      capture" section lives in `~/.claude/CLAUDE.md` -- this repo's
+      maintainer's own personal, per-machine global Claude Code config,
+      hand-written over many sessions, never tracked in this repo. No
+      install step created it; no file in the repo even contained a
+      copyable version of it (`grep -rn "CLAUDE.md" skills/` only turned
+      up skill files *referencing* "the user's global CLAUDE.md" as where
+      triggers live, never the actual snippet). A new user running
+      `pip install -e .` got every manually-invoked skill working
+      (`/brainny-catch`, `/brainny-extract`, `/brainny-synthesize`, ...)
+      but zero ambient/automatic behavior, with nothing telling them a
+      second setup step existed.
+    - Two-part fix, matching the two things that were actually missing:
+      1. `skills/brainny/claude-md-snippet.md` -- a real, generic,
+         copy-pasteable version of the ambient-capture CLAUDE.md section
+         (all 5 automatic behaviors, all 5 direct-trigger skills, the
+         non-negotiable guardrails from step 34), explaining up front
+         *why* this step can't be automated: Claude Code only reads
+         instructions from `~/.claude/CLAUDE.md` at session start, and
+         brainny has no business writing into the user's own hand-edited
+         global config on its own initiative.
+      2. `brainny install-skills` (new CLI command, `cmd_install_skills`
+         in `cli.py`) -- closes the *other* half of the gap, where the
+         README previously just said "install the skills" with no actual
+         command: copies each `skills/brainny/*.md` into
+         `~/.claude/skills/<name>/SKILL.md`, splicing in the
+         "Global install of..." blockquote header (previously
+         hand-written per file, now generated) after each file's title
+         line, so a new user doesn't have to reconstruct that convention
+         by hand for 10 files. Prints the list of slash commands it just
+         enabled, then explicitly points at `claude-md-snippet.md` and
+         `~/.claude/CLAUDE.md` for the still-manual second step -- the
+         command cannot silently "finish the job" because the CLAUDE.md
+         paste is inherently a step only the user can take.
+    - README's "Let it capture itself, ambiently" section rewritten as an
+      explicit two-step, one-time setup (`brainny install-skills`, then
+      paste the CLAUDE.md block) instead of one vague "install the skills"
+      line that never mentioned the second step at all.
+    - New tests in `tests/test_cli.py`: every skill file gets installed
+      with the header spliced in correctly and the original body
+      untouched, the command fails cleanly (not silently) outside an
+      editable repo clone (a packaged/non-editable install has no
+      sibling `skills/` directory to copy from), and the printed output
+      actually names the CLAUDE.md paste-in step rather than implying the
+      command did everything. 149 passed.
+    - Left open, not part of this fix: whether `brainny install-skills`
+      should also *offer* (never silently do) to append the CLAUDE.md
+      block itself, e.g. behind an explicit `--and-claude-md` flag --
+      deliberately not built without the user asking for it, since
+      writing into someone's global assistant config crosses a real
+      trust boundary this repo has otherwise been careful never to cross
+      on its own initiative.
+
 Each step should land, get tested, and get dogfooded (per SEED.md §6
 Layer 7) before the next starts — same discipline as the v0 build.

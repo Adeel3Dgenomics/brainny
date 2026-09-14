@@ -1292,3 +1292,67 @@ def test_propose_html_includes_opportunities_tab(tmp_path, capsys):
     html = (out_dir / "graph.html").read_text(encoding="utf-8")
     assert 'data-tab="opportunities"' in html
     assert "Opportunities (1)" in html
+
+
+# ---- install-skills: closes the gap where `pip install -e .` alone gave a
+# new user no way to get /brainny-catch etc. working without hand-copying
+# files and reconstructing the global-mirror header convention themselves ----
+
+
+def test_install_skills_copies_every_skill_file(tmp_path, capsys, monkeypatch):
+    import brainny.cli as cli_module
+
+    target = tmp_path / "claude-skills"
+    monkeypatch.setattr(cli_module, "CLAUDE_SKILLS_DIR", target)
+
+    code = main(["install-skills"])
+    assert code == 0
+
+    for skill_name in cli_module.SKILL_FILE_MAP.values():
+        installed = target / skill_name / "SKILL.md"
+        assert installed.exists(), f"missing {installed}"
+        text = installed.read_text(encoding="utf-8")
+        assert "Global install of" in text
+        assert "brainny install-skills" in text
+
+    out = capsys.readouterr().out
+    assert "installed 10 skill(s)" in out
+    assert "/brainny-catch" in out
+    assert "claude-md-snippet.md" in out
+    # the paste-in-yourself reminder must actually be present, not implied
+    assert "~/.claude/CLAUDE.md" in out
+
+
+def test_install_skills_preserves_skill_title_and_body(tmp_path, monkeypatch):
+    import brainny.cli as cli_module
+
+    target = tmp_path / "claude-skills"
+    monkeypatch.setattr(cli_module, "CLAUDE_SKILLS_DIR", target)
+
+    main(["install-skills"])
+
+    catch_installed = (target / "brainny-catch" / "SKILL.md").read_text(encoding="utf-8")
+    original = (
+        Path(__file__).parent.parent / "skills" / "brainny" / "catch.md"
+    ).read_text(encoding="utf-8")
+    assert catch_installed.startswith("# brainny — catch skill (lightweight, ambient)")
+    # the rest of the original body must survive untouched, just with the
+    # global-mirror blockquote spliced in after the title
+    original_body = original.split("\n", 1)[1]
+    assert original_body in catch_installed
+
+
+def test_install_skills_fails_cleanly_outside_a_repo_clone(tmp_path, monkeypatch, capsys):
+    import brainny.cli as cli_module
+
+    monkeypatch.setattr(cli_module, "CLAUDE_SKILLS_DIR", tmp_path / "claude-skills")
+    # simulate a packaged (non-editable) install: cli.py has no sibling
+    # skills/ two directories up
+    fake_cli_file = tmp_path / "fake-site-packages" / "brainny" / "cli.py"
+    fake_cli_file.parent.mkdir(parents=True)
+    fake_cli_file.write_text("", encoding="utf-8")
+    monkeypatch.setattr(cli_module, "__file__", str(fake_cli_file))
+
+    code = main(["install-skills"])
+    assert code == 1
+    assert "skills source not found" in capsys.readouterr().err

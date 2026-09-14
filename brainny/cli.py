@@ -1,6 +1,6 @@
 """brainny CLI — entry: capture | propose | attach | query | status |
 config | search | recall | recent | open | central | reassign | badge |
-grow | neglected | install | serve | hook.
+install-skills | grow | neglected | install | serve | hook.
 
 v0 (see SEED.md §7) implements capture + query for real. status/config/
 search/recent/open are OPERATIONS.md §6 step 2 — pure CLI surface on data
@@ -60,6 +60,28 @@ NOT_YET = {
     "install": "v1 (cross-platform installer)",
     "serve": "v0.3 (MCP server)",
     "hook": "v0.2 (git hook integration)",
+}
+
+# Where the global skill mirrors live, so any Claude Code session (not
+# just one started inside this repo) can invoke /brainny-catch etc.
+CLAUDE_SKILLS_DIR = Path.home() / ".claude" / "skills"
+
+# skills/brainny/<file> -> the ~/.claude/skills/<name>/SKILL.md it installs
+# as. Keep this in sync with the repo's skills/brainny/ directory --
+# claude-md-snippet.md is deliberately excluded, it's not a skill, it's
+# the CLAUDE.md block cmd_install_skills reminds the user to paste in by
+# hand (see that file for why this can't be automated).
+SKILL_FILE_MAP = {
+    "SKILL.md": "brainny",
+    "catch.md": "brainny-catch",
+    "catch-this.md": "brainny-catch-this",
+    "catch-skill.md": "brainny-catch-skill",
+    "sync-check.md": "brainny-sync-check",
+    "onboarding.md": "brainny-onboarding",
+    "recall.md": "brainny-recall",
+    "synthesize.md": "brainny-synthesize",
+    "propose-check.md": "brainny-propose-check",
+    "extract.md": "brainny-extract",
 }
 
 
@@ -648,6 +670,66 @@ def cmd_badge(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_install_skills(args: argparse.Namespace) -> int:
+    """Closes a real gap: installing the pip package only makes `brainny
+    <command>` work. The slash commands (/brainny-catch, /brainny-extract,
+    ...) need copies of skills/brainny/*.md under ~/.claude/skills/ --
+    previously the README just said "install the skills" with no command
+    to do it, so a new user had to hand-copy 10 files and reconstruct the
+    global-mirror header convention themselves. This does the copy;
+    it deliberately does NOT touch ~/.claude/CLAUDE.md (that's the user's
+    own hand-edited global config) -- it just points at the paste-in
+    block in claude-md-snippet.md, which is what actually makes any of
+    this run automatically rather than only on explicit slash commands."""
+    src_dir = Path(__file__).resolve().parent.parent / "skills" / "brainny"
+    if not src_dir.is_dir():
+        print(
+            f"brainny: skills source not found at {src_dir} -- this command only works "
+            "from an editable clone of the brainny repo (`pip install -e .`), not a "
+            "packaged install.",
+            file=sys.stderr,
+        )
+        return 1
+
+    installed = []
+    for filename, skill_name in SKILL_FILE_MAP.items():
+        src = src_dir / filename
+        if not src.exists():
+            continue
+        title, _, rest = src.read_text(encoding="utf-8").partition("\n")
+        header = (
+            f"\n> Global install of `skills/brainny/{filename}` from the brainny tool\n"
+            "> itself (this clone), so this skill works in every project, not only\n"
+            "> inside the brainny repo. If the two drift, the repo's copy is the\n"
+            "> source of truth -- rerun `brainny install-skills` to resync.\n"
+        )
+        target_dir = CLAUDE_SKILLS_DIR / skill_name
+        target_dir.mkdir(parents=True, exist_ok=True)
+        (target_dir / "SKILL.md").write_text(f"{title}\n{header}{rest}", encoding="utf-8")
+        installed.append(skill_name)
+
+    if not installed:
+        print(f"brainny: no skill files found in {src_dir}.", file=sys.stderr)
+        return 1
+
+    print(f"brainny: installed {len(installed)} skill(s) into {CLAUDE_SKILLS_DIR}:")
+    for name in installed:
+        print(f"  - /{name}")
+
+    snippet_path = src_dir / "claude-md-snippet.md"
+    print()
+    print(
+        "These slash commands now work in any project. That's the manual half.\n"
+        "For the AUTOMATIC half -- catching ideas at the end of a turn, checking\n"
+        "sync drift, proposing opportunities, recalling relevant past ideas, all\n"
+        "without being asked -- copy the CLAUDE.md block from:\n"
+        f"  {snippet_path}\n"
+        "into your own ~/.claude/CLAUDE.md. brainny never writes to that file for\n"
+        "you; it's your hand-edited global config, so that one step stays manual."
+    )
+    return 0
+
+
 def cmd_reassign(args: argparse.Namespace) -> int:
     """Fix the exact mistake `brainny central`'s mismatch check flags:
     idea(s) that ended up in the wrong project's graph.json because
@@ -956,6 +1038,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_badge.add_argument("--out", help="output path (default: ./brainny-badge.svg)")
     p_badge.set_defaults(func=cmd_badge)
+
+    p_install_skills = sub.add_parser(
+        "install-skills",
+        help="copy skills/brainny/*.md into ~/.claude/skills/ so /brainny-catch etc. work in every project",
+    )
+    p_install_skills.set_defaults(func=cmd_install_skills)
 
     for name in NOT_YET:
         p = sub.add_parser(name, help=f"(not yet implemented - {NOT_YET[name]})")

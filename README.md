@@ -300,9 +300,22 @@ brainny recall retry api client  # search THIS project + every project in your c
 brainny recent --days 7          # what you've captured lately
 ```
 
-**3. Let it capture itself, ambiently.** Install the skills once
-(`skills/brainny/*.md`, plus their global counterparts under
-`~/.claude/skills/`) and every Claude Code session will:
+**3. Let it capture itself, ambiently.** This is a two-step, one-time setup
+— skipping step 2 is the most common way this ends up **not** working:
+
+```bash
+brainny install-skills    # step 1: copies skills/brainny/*.md into ~/.claude/skills/
+                           #   -- this alone only makes the slash commands
+                           #   (/brainny-catch, /brainny-extract, ...) work by hand
+```
+
+Step 2 is manual and can't be automated: paste the CLAUDE.md block printed
+by that command (also at `skills/brainny/claude-md-snippet.md`) into your
+own `~/.claude/CLAUDE.md`. That file is your hand-edited global Claude
+Code config — brainny will never write to it for you — and it's the
+*only* thing that turns any of this from "type a slash command" into
+"happens automatically." Do both steps once per machine, then every
+Claude Code session will:
 - **once, ever, per machine** — on the first session after install, if
   no central folder is set up yet, ask whether you want one (and where,
   and whether to back it with GitHub) before ever touching anything;
