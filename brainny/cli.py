@@ -66,11 +66,21 @@ NOT_YET = {
 # just one started inside this repo) can invoke /brainny-catch etc.
 CLAUDE_SKILLS_DIR = Path.home() / ".claude" / "skills"
 
+# The user's global Claude Code instructions file -- only ever touched by
+# cmd_install_skills, and only when the user explicitly passes
+# --write-claude-md (see there for why this stays opt-in, not automatic).
+CLAUDE_MD_PATH = Path.home() / ".claude" / "CLAUDE.md"
+
+# The exact heading the ambient-capture block starts with, in both
+# claude-md-snippet.md and a user's CLAUDE.md -- used to detect "already
+# installed" so --write-claude-md never appends a duplicate section.
+CLAUDE_MD_SECTION_HEADING = "# brAInny ambient capture"
+
 # skills/brainny/<file> -> the ~/.claude/skills/<name>/SKILL.md it installs
 # as. Keep this in sync with the repo's skills/brainny/ directory --
 # claude-md-snippet.md is deliberately excluded, it's not a skill, it's
-# the CLAUDE.md block cmd_install_skills reminds the user to paste in by
-# hand (see that file for why this can't be automated).
+# the CLAUDE.md block cmd_install_skills can paste in (by hand, or via
+# --write-claude-md).
 SKILL_FILE_MAP = {
     "SKILL.md": "brainny",
     "catch.md": "brainny-catch",
@@ -670,17 +680,32 @@ def cmd_badge(args: argparse.Namespace) -> int:
     return 0
 
 
+def _extract_claude_md_block(snippet_path: Path) -> str:
+    """Pulls just the fenced ```markdown ... ``` block out of
+    claude-md-snippet.md -- that block (not the explanatory prose around
+    it) is the literal text that belongs in a user's CLAUDE.md."""
+    text = snippet_path.read_text(encoding="utf-8")
+    start_marker = "```markdown\n"
+    start = text.index(start_marker) + len(start_marker)
+    end = text.index("\n```", start)
+    return text[start:end].strip("\n") + "\n"
+
+
 def cmd_install_skills(args: argparse.Namespace) -> int:
     """Closes a real gap: installing the pip package only makes `brainny
     <command>` work. The slash commands (/brainny-catch, /brainny-extract,
     ...) need copies of skills/brainny/*.md under ~/.claude/skills/ --
     previously the README just said "install the skills" with no command
     to do it, so a new user had to hand-copy 10 files and reconstruct the
-    global-mirror header convention themselves. This does the copy;
-    it deliberately does NOT touch ~/.claude/CLAUDE.md (that's the user's
-    own hand-edited global config) -- it just points at the paste-in
-    block in claude-md-snippet.md, which is what actually makes any of
-    this run automatically rather than only on explicit slash commands."""
+    global-mirror header convention themselves. This does the copy.
+
+    Whether it also writes the ambient-capture section into
+    ~/.claude/CLAUDE.md is the user's explicit call, via --write-claude-md
+    -- that file is hand-edited global assistant config, not something
+    installing a package should ever touch by default; a real user asked
+    "why does he have to paste it manually" after the first version of
+    this command only ever printed a reminder, so the write path exists
+    now, but stays opt-in rather than becoming the default behavior."""
     src_dir = Path(__file__).resolve().parent.parent / "skills" / "brainny"
     if not src_dir.is_dir():
         print(
@@ -718,15 +743,35 @@ def cmd_install_skills(args: argparse.Namespace) -> int:
 
     snippet_path = src_dir / "claude-md-snippet.md"
     print()
-    print(
-        "These slash commands now work in any project. That's the manual half.\n"
-        "For the AUTOMATIC half -- catching ideas at the end of a turn, checking\n"
-        "sync drift, proposing opportunities, recalling relevant past ideas, all\n"
-        "without being asked -- copy the CLAUDE.md block from:\n"
-        f"  {snippet_path}\n"
-        "into your own ~/.claude/CLAUDE.md. brainny never writes to that file for\n"
-        "you; it's your hand-edited global config, so that one step stays manual."
-    )
+
+    if getattr(args, "write_claude_md", False):
+        block = _extract_claude_md_block(snippet_path)
+        existing = CLAUDE_MD_PATH.read_text(encoding="utf-8") if CLAUDE_MD_PATH.exists() else ""
+        if CLAUDE_MD_SECTION_HEADING in existing:
+            print(
+                f'brainny: {CLAUDE_MD_PATH} already has a "{CLAUDE_MD_SECTION_HEADING}" '
+                "section -- leaving it untouched (edit it by hand if you want to update it, "
+                "or remove that section first and rerun with --write-claude-md)."
+            )
+        else:
+            CLAUDE_MD_PATH.parent.mkdir(parents=True, exist_ok=True)
+            if existing and not existing.endswith("\n"):
+                existing += "\n"
+            separator = "\n" if existing else ""
+            CLAUDE_MD_PATH.write_text(existing + separator + block, encoding="utf-8")
+            print(f"brainny: appended the ambient-capture section to {CLAUDE_MD_PATH}.")
+            print("Start a new Claude Code session for it to take effect.")
+    else:
+        print(
+            "These slash commands now work in any project. That's the manual half.\n"
+            "For the AUTOMATIC half -- catching ideas at the end of a turn, checking\n"
+            "sync drift, proposing opportunities, recalling relevant past ideas, all\n"
+            "without being asked -- either rerun this with --write-claude-md to append\n"
+            "it for you, or copy the CLAUDE.md block yourself from:\n"
+            f"  {snippet_path}\n"
+            f"into your own {CLAUDE_MD_PATH}. brainny only writes to that file when you\n"
+            "pass --write-claude-md; it's your global config, so doing it is opt-in."
+        )
     return 0
 
 
@@ -1042,6 +1087,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_install_skills = sub.add_parser(
         "install-skills",
         help="copy skills/brainny/*.md into ~/.claude/skills/ so /brainny-catch etc. work in every project",
+    )
+    p_install_skills.add_argument(
+        "--write-claude-md", action="store_true",
+        help="also append the ambient-capture section to ~/.claude/CLAUDE.md (creates the file "
+        "if missing; never duplicates -- skips if that section is already there). Opt-in: this "
+        "is the only command in brainny that ever writes to your global Claude Code config, and "
+        "only when you pass this flag.",
     )
     p_install_skills.set_defaults(func=cmd_install_skills)
 

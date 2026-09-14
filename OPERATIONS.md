@@ -1435,13 +1435,49 @@ permission-gated local check — see above.
       sibling `skills/` directory to copy from), and the printed output
       actually names the CLAUDE.md paste-in step rather than implying the
       command did everything. 149 passed.
-    - Left open, not part of this fix: whether `brainny install-skills`
-      should also *offer* (never silently do) to append the CLAUDE.md
-      block itself, e.g. behind an explicit `--and-claude-md` flag --
-      deliberately not built without the user asking for it, since
-      writing into someone's global assistant config crosses a real
-      trust boundary this repo has otherwise been careful never to cross
-      on its own initiative.
+    - Left open at the time: whether `brainny install-skills` should also
+      *offer* to append the CLAUDE.md block itself, behind an explicit
+      flag, rather than only ever printing a reminder. Closed by step 36,
+      immediately after, once a real user pushed back on "he will paste
+      it manually?!".
+
+36. Fix: closed the "left open" item from step 35 -- `install-skills
+    --write-claude-md`. ✅
+    - Real user reaction to step 35 landing: "he will paste it manually
+      !" -- read as real pushback on making the *easy* half (copying
+      skill files) a real command while leaving the half that actually
+      matters (the CLAUDE.md section, without which nothing runs
+      automatically) a manual copy-paste with no command backing it.
+    - Added `--write-claude-md` to `brainny install-skills`
+      (`_extract_claude_md_block` pulls just the fenced ```markdown```
+      block out of `claude-md-snippet.md`, not the explanatory prose
+      around it). Appends to `~/.claude/CLAUDE.md`, creating the file and
+      its parent dir if missing. Idempotent by construction: checks for
+      the literal `# brAInny ambient capture` heading already being
+      present and skips (with a message saying so) rather than
+      duplicating the section on a rerun.
+    - Kept opt-in rather than making it the default of `install-skills`
+      itself: this is still the one and only place in brainny that
+      writes to the user's own global Claude Code config, and doing that
+      by default (vs. only when the flag is explicitly passed) would
+      cross the same trust boundary every other ambient behavior in this
+      tool has been deliberately careful never to cross without an
+      explicit ask in the moment. The flag itself *is* that explicit ask
+      -- typing `--write-claude-md` is different from a package quietly
+      deciding to do it on install.
+    - README's step 2 (install-skills, README.md's "Let it capture
+      itself, ambiently" section) and `claude-md-snippet.md`'s own
+      instructions both updated to lead with the one-command path
+      (`--write-claude-md`) and mention the hand-paste path as the
+      fallback for anyone who'd rather not have anything touch their
+      global config automatically, instead of presenting hand-pasting as
+      the only option.
+    - New tests: writes create the file from scratch with correct
+      content and no leaked fence markers, append cleanly after existing
+      unrelated CLAUDE.md content without disturbing it, are idempotent
+      across repeated `--write-claude-md` runs (no duplicate section),
+      and the flag being omitted is confirmed to leave the file
+      completely untouched (still requires the explicit ask). 153 passed.
 
 Each step should land, get tested, and get dogfooded (per SEED.md §6
 Layer 7) before the next starts — same discipline as the v0 build.

@@ -12,10 +12,19 @@ Claude Code only reads instructions from there (or a project's own
 `CLAUDE.md`) at the start of a session — nothing in a skill file or a
 pip install can make itself ambient on its own.
 
-**To enable it: copy the block below into `~/.claude/CLAUDE.md`**
-(create the file if it doesn't exist yet). Do this once, on each machine
-where you want ambient capture. Without this step, brainny still works
-fully by hand — you just have to type the slash commands yourself.
+**To enable it, either run:**
+
+```bash
+brainny install-skills --write-claude-md
+```
+
+which appends the block below into `~/.claude/CLAUDE.md` for you
+(creating the file if needed, and safe to rerun — it skips instead of
+duplicating if the section's already there), **or copy the block below
+in by hand** if you'd rather not have anything write to your global
+config automatically. Either way, do this once, on each machine where you
+want ambient capture. Without it, brainny still works fully by hand — you
+just have to type the slash commands yourself.
 
 ```markdown
 # brAInny ambient capture
@@ -120,9 +129,9 @@ sync with, the brainny repo's own `skills/brainny/*.md`). The tool
 itself: see its `OPERATIONS.md` for the full picture.
 ```
 
-That's the whole thing — one paste, one time. `brainny install-skills`
-(see the main README's Install section) copies the skill files into
-`~/.claude/skills/` for you, but it does **not** touch
-`~/.claude/CLAUDE.md` on its own — that file is yours, hand-edited
-global config, and brainny will never write to it without you doing the
-paste yourself.
+That's the whole thing — one paste (or one flag), one time.
+`brainny install-skills` (see the main README's Install section) copies
+the skill files into `~/.claude/skills/` for you either way; whether it
+also writes this block into `~/.claude/CLAUDE.md` is entirely up to
+whether you passed `--write-claude-md` — that file is yours, hand-edited
+global config, so brainny only ever touches it when you explicitly ask.

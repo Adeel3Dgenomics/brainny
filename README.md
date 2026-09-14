@@ -304,17 +304,20 @@ brainny recent --days 7          # what you've captured lately
 — skipping step 2 is the most common way this ends up **not** working:
 
 ```bash
-brainny install-skills    # step 1: copies skills/brainny/*.md into ~/.claude/skills/
-                           #   -- this alone only makes the slash commands
-                           #   (/brainny-catch, /brainny-extract, ...) work by hand
+brainny install-skills                    # step 1: copies skills/brainny/*.md into ~/.claude/skills/
+                                           #   -- this alone only makes the slash commands
+                                           #   (/brainny-catch, /brainny-extract, ...) work by hand
+brainny install-skills --write-claude-md  # step 2: also appends the ambient-capture section
+                                           #   to ~/.claude/CLAUDE.md -- this is what actually
+                                           #   makes it automatic. Safe to rerun: skips instead
+                                           #   of duplicating if that section is already there.
 ```
 
-Step 2 is manual and can't be automated: paste the CLAUDE.md block printed
-by that command (also at `skills/brainny/claude-md-snippet.md`) into your
-own `~/.claude/CLAUDE.md`. That file is your hand-edited global Claude
-Code config — brainny will never write to it for you — and it's the
-*only* thing that turns any of this from "type a slash command" into
-"happens automatically." Do both steps once per machine, then every
+`--write-claude-md` is the only thing in brainny that ever writes to your
+global Claude Code config, and it only does so when you explicitly pass
+it — omit it and step 1 alone just prints the block (also readable at
+`skills/brainny/claude-md-snippet.md`) for you to paste in by hand
+instead. Either way, do both steps once per machine, then every
 Claude Code session will:
 - **once, ever, per machine** — on the first session after install, if
   no central folder is set up yet, ask whether you want one (and where,

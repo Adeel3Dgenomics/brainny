@@ -1320,7 +1320,8 @@ def test_install_skills_copies_every_skill_file(tmp_path, capsys, monkeypatch):
     assert "/brainny-catch" in out
     assert "claude-md-snippet.md" in out
     # the paste-in-yourself reminder must actually be present, not implied
-    assert "~/.claude/CLAUDE.md" in out
+    assert "--write-claude-md" in out
+    assert str(cli_module.CLAUDE_MD_PATH) in out
 
 
 def test_install_skills_preserves_skill_title_and_body(tmp_path, monkeypatch):
@@ -1356,3 +1357,78 @@ def test_install_skills_fails_cleanly_outside_a_repo_clone(tmp_path, monkeypatch
     code = main(["install-skills"])
     assert code == 1
     assert "skills source not found" in capsys.readouterr().err
+
+
+def test_install_skills_write_claude_md_creates_file(tmp_path, monkeypatch, capsys):
+    import brainny.cli as cli_module
+
+    monkeypatch.setattr(cli_module, "CLAUDE_SKILLS_DIR", tmp_path / "claude-skills")
+    claude_md = tmp_path / "claude-home" / "CLAUDE.md"
+    monkeypatch.setattr(cli_module, "CLAUDE_MD_PATH", claude_md)
+
+    code = main(["install-skills", "--write-claude-md"])
+    assert code == 0
+
+    assert claude_md.exists()
+    text = claude_md.read_text(encoding="utf-8")
+    assert text.startswith(cli_module.CLAUDE_MD_SECTION_HEADING)
+    assert "brainny-onboarding" in text
+    assert "brainny-extract" in text
+    # the fenced-code-block markers themselves must NOT leak into the file
+    assert "```" not in text
+
+    out = capsys.readouterr().out
+    assert f"appended the ambient-capture section to {claude_md}" in out
+
+
+def test_install_skills_write_claude_md_appends_after_existing_content(tmp_path, monkeypatch):
+    import brainny.cli as cli_module
+
+    monkeypatch.setattr(cli_module, "CLAUDE_SKILLS_DIR", tmp_path / "claude-skills")
+    claude_md = tmp_path / "claude-home" / "CLAUDE.md"
+    claude_md.parent.mkdir(parents=True)
+    claude_md.write_text("# HPC / cluster work\n\nsome unrelated existing config\n", encoding="utf-8")
+    monkeypatch.setattr(cli_module, "CLAUDE_MD_PATH", claude_md)
+
+    main(["install-skills", "--write-claude-md"])
+
+    text = claude_md.read_text(encoding="utf-8")
+    assert text.startswith("# HPC / cluster work\n\nsome unrelated existing config\n")
+    assert cli_module.CLAUDE_MD_SECTION_HEADING in text
+    # the pre-existing section must not have been touched or duplicated
+    assert text.count("# HPC / cluster work") == 1
+
+
+def test_install_skills_write_claude_md_is_idempotent(tmp_path, monkeypatch, capsys):
+    import brainny.cli as cli_module
+
+    monkeypatch.setattr(cli_module, "CLAUDE_SKILLS_DIR", tmp_path / "claude-skills")
+    claude_md = tmp_path / "claude-home" / "CLAUDE.md"
+    monkeypatch.setattr(cli_module, "CLAUDE_MD_PATH", claude_md)
+
+    main(["install-skills", "--write-claude-md"])
+    first_write = claude_md.read_text(encoding="utf-8")
+
+    code = main(["install-skills", "--write-claude-md"])
+    assert code == 0
+    assert claude_md.read_text(encoding="utf-8") == first_write
+    assert claude_md.read_text(encoding="utf-8").count(cli_module.CLAUDE_MD_SECTION_HEADING) == 1
+
+    out = capsys.readouterr().out
+    assert "already has a" in out
+    assert "leaving it untouched" in out
+
+
+def test_install_skills_without_flag_never_touches_claude_md(tmp_path, monkeypatch, capsys):
+    import brainny.cli as cli_module
+
+    monkeypatch.setattr(cli_module, "CLAUDE_SKILLS_DIR", tmp_path / "claude-skills")
+    claude_md = tmp_path / "claude-home" / "CLAUDE.md"
+    monkeypatch.setattr(cli_module, "CLAUDE_MD_PATH", claude_md)
+
+    code = main(["install-skills"])
+    assert code == 0
+    assert not claude_md.exists()
+
+    out = capsys.readouterr().out
+    assert "--write-claude-md" in out
