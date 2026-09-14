@@ -480,6 +480,33 @@ def cmd_open(args: argparse.Namespace) -> int:
         path = save_html(graph, out_dir)
     webbrowser.open(path.resolve().as_uri())
     print(f"brainny: opened {path}")
+
+    # `brainny open` is scoped to THIS directory's own local graph, not
+    # everything the user has ever captured -- a real user hit exactly
+    # this confusion ("I did a lot of projects!") after running it from a
+    # directory with nothing captured locally, and seeing an empty
+    # dashboard with no hint that their other projects' ideas live
+    # elsewhere. If this project's own graph is empty, point at wherever
+    # the rest of it actually is instead of leaving that a mystery.
+    if not graph.nodes:
+        central = config.get_value("central-folder")
+        if central:
+            central_root = Path(central)
+            projects = central_module.list_central_projects(central_root)
+            if projects:
+                merged = central_module.build_merged_graph(central_root)
+                if merged.nodes:
+                    print(
+                        f"brainny: this project's own dashboard is empty, but your central folder has "
+                        f"{len(merged.nodes)} idea(s) across {len(projects)} project(s) -- "
+                        f"see them all with `brainny open --central`."
+                    )
+        else:
+            print(
+                "brainny: this project's own dashboard is empty. If you've captured ideas in OTHER "
+                "projects, each one's `brainny-out/` is separate until you set up a shared central "
+                "folder: `brainny config set-central <path>` (see README's central-folder section)."
+            )
     return 0
 
 

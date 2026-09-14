@@ -230,6 +230,39 @@ def test_open_generates_dashboard_on_first_run(tmp_path, capsys, monkeypatch):
     assert "No ideas captured yet" in (out_dir / "graph.html").read_text(encoding="utf-8")
 
 
+def test_open_with_empty_local_graph_points_at_central_folder(tmp_path, capsys, monkeypatch):
+    # a real user hit this: ran `brainny open` from a directory with
+    # nothing captured locally and got a convincingly empty dashboard,
+    # with no hint that their other projects' ideas live in the central
+    # folder instead. Set up a central folder with real data from a
+    # DIFFERENT project, then open this (empty) one.
+    central_root = tmp_path / "central"
+    capture(FIXTURES / "sample_entries.json", project="otherproj", session="s1", out_dir=central_root / "otherproj")
+    main(["config", "set-central", str(central_root)])
+    capsys.readouterr()
+
+    out_dir = tmp_path / "out"
+    monkeypatch.setattr("webbrowser.open", lambda url: None)
+
+    code = main(["--out-dir", str(out_dir), "open"])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "this project's own dashboard is empty" in out
+    assert "central folder has" in out
+    assert "brainny open --central" in out
+
+
+def test_open_with_empty_local_graph_and_no_central_suggests_setting_one_up(tmp_path, capsys, monkeypatch):
+    out_dir = tmp_path / "out"
+    monkeypatch.setattr("webbrowser.open", lambda url: None)
+
+    code = main(["--out-dir", str(out_dir), "open"])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "this project's own dashboard is empty" in out
+    assert "brainny config set-central" in out
+
+
 def test_open_launches_browser(tmp_path, capsys, monkeypatch):
     out_dir = tmp_path / "out"
     capture(FIXTURES / "sample_entries.json", project="p", session="s1", out_dir=out_dir)

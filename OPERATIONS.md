@@ -1193,5 +1193,39 @@ permission-gated local check — see above.
       now-wrong behavior) into `test_open_generates_dashboard_on_first_run`
       -- 141 tests total, same count (a straight swap, not an addition).
 
+30. Fix: `brainny open` showing empty with no hint the real data is elsewhere. ✅
+    - Real user report, immediately after step 29 shipped: "I used it
+      brainny open and its empty why, I did a lot of projects!" Root
+      cause: `brainny open` is (correctly) scoped to the CURRENT
+      directory's own local graph -- but step 29's new auto-generate
+      behavior meant running it from a directory with nothing captured
+      locally now silently produced a convincing, fully-rendered empty
+      dashboard, with nothing anywhere telling the user their other
+      projects' ideas live elsewhere (their own project directories, or
+      the central folder). The old behavior at least errored; the new
+      one looked like a real, empty answer.
+    - Fix: when the local graph is empty, `cmd_open` now also checks the
+      configured central folder (if any) via
+      `central_module.list_central_projects()` /
+      `build_merged_graph()` (the same functions `brainny central`
+      already uses) and prints how many ideas/projects live there, with
+      the exact command to see them (`brainny open --central`). If no
+      central folder is configured at all, it suggests setting one up
+      (`brainny config set-central <path>`) instead, since without one,
+      each project's `brainny-out/` is genuinely invisible from any
+      other project's directory -- that's not a bug, just how the
+      asymmetric-sync design (SEED.md §1.7) works, but it needs to
+      actually be said out loud in the moment someone hits it.
+    - 2 new tests
+      (`test_open_with_empty_local_graph_points_at_central_folder`,
+      `test_open_with_empty_local_graph_and_no_central_suggests_setting_one_up`)
+      -- 143 tests total. Checked the real central folder for pollution
+      after testing: none from this session's own test run (found recent
+      real activity in the maintainer's own `AFR-AMR` project instead --
+      confirmed genuine by content, not a fixture artifact -- which
+      turned out to be the user's own concurrent real usage that
+      prompted this bug report in the first place, not a side effect of
+      anything run here).
+
 Each step should land, get tested, and get dogfooded (per SEED.md §6
 Layer 7) before the next starts — same discipline as the v0 build.
