@@ -76,7 +76,8 @@ def _sync_to_central(out_dir: Path, graph: Graph, project: str | None) -> Path |
     central = config.get_value("central-folder")
     if not central or not project:
         return None
-    central_out = Path(central) / project
+    central_root = Path(central)
+    central_out = central_root / project
     save_graph(graph, central_out)
     local_opportunities = opportunities_path(out_dir)
     if local_opportunities.exists():
@@ -85,7 +86,35 @@ def _sync_to_central(out_dir: Path, graph: Graph, project: str | None) -> Path |
     local_attachments = out_dir / ATTACHMENTS_DIRNAME
     if local_attachments.is_dir():
         shutil.copytree(local_attachments, central_out / ATTACHMENTS_DIRNAME, dirs_exist_ok=True)
+    _rebuild_merged_central_html(central_root)
     return central_out
+
+
+def _rebuild_merged_central_html(central_root: Path) -> Graph | None:
+    """Keeps <central>/graph.html a live, always-current picture instead
+    of a manually-regenerated snapshot -- a real user hit this exact gap
+    (refreshing the merged dashboard in a browser and seeing nothing
+    change, since the file on disk was only ever rewritten by an explicit
+    `brainny central`/`open --central` call). Every project->central
+    mirror above already touches every project's own copy in
+    `central_root`; rebuilding the merge here too, on that same trigger,
+    means the merged view needs no separate manual step at all -- same
+    "no server, just always-fresh files" spirit as everything else here,
+    just applied to the merged view too. Cheap: local-disk reads of
+    however many projects are in central, no network. Returns the merged
+    Graph (there's no standalone merged graph.json on disk to re-read --
+    only graph.html, with the data embedded inline -- so callers that
+    need the merged node count get it from this return value instead of
+    re-deriving it themselves), or None if central has nothing synced yet."""
+    projects = central_module.list_central_projects(central_root)
+    if not projects:
+        return None
+    merged = central_module.build_merged_graph(central_root)
+    merged_opportunities = central_module.build_merged_opportunities(central_root)
+    if merged_opportunities.items:
+        save_opportunities(merged_opportunities, central_root)
+    save_html(merged, central_root, title="brainny — central")
+    return merged
 
 
 def cmd_capture(args: argparse.Namespace) -> int:
@@ -464,13 +493,11 @@ def cmd_open(args: argparse.Namespace) -> int:
                     file=sys.stderr,
                 )
                 return 1
-            merged = central_module.build_merged_graph(central_root)
-            merged_opportunities = central_module.build_merged_opportunities(central_root)
-            if merged_opportunities.items:
-                save_opportunities(merged_opportunities, central_root)
-            path = save_html(merged, central_root, title="brainny — central")
+            merged = _rebuild_merged_central_html(central_root)
+            path = html_path(central_root)
             webbrowser.open(path.resolve().as_uri())
-            print(f"brainny: opened {path} (merged: {len(merged.nodes)} idea(s) across {len(projects)} project(s))")
+            merged_count = len(merged.nodes) if merged else 0
+            print(f"brainny: opened {path} (merged: {merged_count} idea(s) across {len(projects)} project(s))")
             return 0
         path = html_path(central_root / project)
         if not path.exists():
@@ -567,13 +594,12 @@ def cmd_central(args: argparse.Namespace) -> int:
             print(f"  {folder}/{node_id} says its project is '{claimed}'")
 
     if args.html or args.open:
-        merged_opportunities = central_module.build_merged_opportunities(central_root)
-        if merged_opportunities.items:
-            save_opportunities(merged_opportunities, central_root)
-        # save_html() loads opportunities.json from central_root itself
-        # (see viz.py) -- writing the merged one there first is what makes
-        # it show up, no extra plumbing needed.
-        path = save_html(merged, central_root, title="brainny — central")
+        # the same helper every capture/attach/propose/sync call already
+        # triggers -- graph.html here is normally already current by the
+        # time anyone asks for it explicitly, this just guarantees it
+        # regardless of how it got here.
+        _rebuild_merged_central_html(central_root)
+        path = html_path(central_root)
         print(f"brainny: wrote {path} - open it in a browser.")
         if args.open:
             webbrowser.open(path.resolve().as_uri())

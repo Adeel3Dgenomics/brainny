@@ -307,12 +307,17 @@ _CSS = """
     font-size: 0.78rem; color: var(--note-fg);
   }
 
-  #theme-toggle {
-    margin-left: auto; background: rgba(var(--overlay-rgb),0.06); border: 1px solid rgba(var(--overlay-rgb),0.16);
+  #live-toggle, #theme-toggle {
+    background: rgba(var(--overlay-rgb),0.06); border: 1px solid rgba(var(--overlay-rgb),0.16);
     color: var(--fg); font: inherit; font-size: 0.9rem; width: 2.1rem; height: 2.1rem; border-radius: 8px;
     cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: none;
   }
-  #theme-toggle:hover { background: rgba(var(--overlay-rgb),0.1); }
+  #live-toggle { margin-left: auto; }
+  #live-toggle:hover, #theme-toggle:hover { background: rgba(var(--overlay-rgb),0.1); }
+  /* on while auto-refresh is enabled -- a spinning glyph would misread as
+     "loading"/stuck, so this is a steady gold highlight instead, same
+     active-state color language as .tab-btn.active elsewhere */
+  #live-toggle.active { background: rgba(232,178,61,0.16); border-color: rgba(232,178,61,0.45); color: var(--active-tab-fg); }
 
   #tab-bar { display: flex; gap: 0.3rem; margin-left: 0.4rem; }
   .tab-btn {
@@ -2241,6 +2246,41 @@ _JS = """
       refreshActiveTab();
     });
   }
+
+  // ---- live auto-refresh: opt-in, off by default. This file is a static
+  // snapshot -- a real user hit exactly this confusion, refreshing
+  // graph.html by hand and seeing nothing change because the file on disk
+  // hadn't been rewritten yet by whatever else was capturing/syncing
+  // elsewhere. Since capture/attach/propose/sync now always keep this
+  // file current the moment anything changes (no separate step needed
+  // any more), the only thing a still-open tab is missing is the reload
+  // itself -- this button does exactly that and nothing else, at a fixed
+  // interval, persisted per-browser via localStorage so leaving this tab
+  // open on a second monitor keeps working across reloads.
+  var liveToggle = document.getElementById('live-toggle');
+  if (liveToggle) {
+    var LIVE_REFRESH_MS = 20000;
+    var liveTimer = null;
+    function setLiveIcon(on) { liveToggle.classList.toggle('active', on); }
+    function startLive() {
+      if (liveTimer) return;
+      liveTimer = setInterval(function () { location.reload(); }, LIVE_REFRESH_MS);
+      setLiveIcon(true);
+    }
+    function stopLive() {
+      clearInterval(liveTimer);
+      liveTimer = null;
+      setLiveIcon(false);
+    }
+    var wasLive = false;
+    try { wasLive = localStorage.getItem('brainny-live-refresh') === '1'; } catch (e) { /* private browsing etc */ }
+    if (wasLive) startLive();
+    liveToggle.addEventListener('click', function () {
+      var next = !liveTimer;
+      if (next) startLive(); else stopLive();
+      try { localStorage.setItem('brainny-live-refresh', next ? '1' : '0'); } catch (e) { /* private browsing etc -- just won't persist */ }
+    });
+  }
 })();
 """
 
@@ -2248,10 +2288,16 @@ _JS = """
 def render_html(graph: Graph, opportunities: Opportunities | None = None, title: str = "brainny") -> str:
     """Render graph.json (+ opportunities.json) as a navigable dashboard
     (D3, vendored inline — see `_D3_JS` above, no CDN/network dependency)
-    with four tabs, and a day/night theme toggle (top-right of the header)
-    that applies to all of them — an explicit choice persists via
-    localStorage, defaulting to the OS's prefers-color-scheme; the light
-    palette is a soft warm tone deliberately, not stark white. Graph tab: a dropdown switches between a radial tree
+    with five tabs, a day/night theme toggle, and an opt-in live-refresh
+    toggle (both top-right of the header, both apply everywhere). The
+    theme choice persists via localStorage, defaulting to the OS's
+    prefers-color-scheme; the light palette is a soft warm tone
+    deliberately, not stark white. The live toggle just reloads the page
+    on a fixed interval when enabled (off by default, also persisted) —
+    this file itself is now kept current automatically by every capture/
+    attach/propose/sync call that touches it (see cli.py's
+    `_rebuild_merged_central_html` for the central-folder case), so a
+    still-open tab only needs the reload, nothing fancier. Graph tab: a dropdown switches between a radial tree
     (domains branching from a center, ideas as rim leaves) and a
     force-directed network with a colored halo per domain group, alongside
     an itemized accordion list (click a title to unfold
@@ -2386,6 +2432,7 @@ def render_html(graph: Graph, opportunities: Opportunities | None = None, title:
       <option value="radial">Radial tree</option>
       <option value="force">Force network with cluster halos</option>
     </select>
+    <button type="button" id="live-toggle" title="Auto-refresh this page every 20s (this file is rewritten on every capture/attach/propose/sync elsewhere)" aria-label="Toggle live auto-refresh">&#8635;</button>
     <button type="button" id="theme-toggle" title="Toggle day/night theme" aria-label="Toggle day/night theme">&#9789;</button>
   </div>
   <div class="row" style="margin-top:0.5rem">

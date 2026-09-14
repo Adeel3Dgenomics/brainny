@@ -131,6 +131,17 @@ def test_render_html_has_network_tab():
     assert "setActiveProject" in out
 
 
+def test_render_html_has_live_refresh_toggle():
+    # opt-in, off by default -- a real user hit the "why doesn't this page
+    # ever update on its own" confusion, and this is the client-side half
+    # of the fix (the other half being cli.py always keeping graph.html
+    # itself current now)
+    out = render_html(Graph())
+    assert 'id="live-toggle"' in out
+    assert "liveToggle" in out
+    assert "brainny-live-refresh" in out
+
+
 def test_render_html_network_tab_uses_shared_project_filter_state():
     # the Network tab's clickable project nodes and the existing project
     # <select> dropdown must agree on the same `activeProject` variable --

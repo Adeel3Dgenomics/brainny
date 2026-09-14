@@ -1301,5 +1301,48 @@ permission-gated local check — see above.
       request) and the "Full skill instructions" mapping list. No CLI/
       test changes -- purely new skill files plus README/this doc.
 
+33. Fix: the merged central dashboard never updated itself; add an opt-in live-refresh toggle. ✅
+    - Real user report, discovered mid-dogfood (right after a large real
+      `/brainny-extract` + `/brainny-synthesize` run across ~30 repos,
+      the biggest real stress test this tool has had): refreshing
+      `<central>/graph.html` in a browser showed nothing changing,
+      despite dozens of new ideas and opportunities having just landed.
+      Root cause: each PROJECT's own dashboard was already kept current
+      automatically (`_sync_to_central` rewrites that project's copy on
+      every `capture`/`attach`/`propose`), but the MERGED view at the
+      central folder's own root was only ever rebuilt by an explicit
+      `brainny central`/`open --central` call -- there was no trigger
+      that kept it current on its own.
+    - Fix: `_sync_to_central` (cli.py) now also calls a new
+      `_rebuild_merged_central_html()` helper after every mirror, which
+      does the same `build_merged_graph`/`build_merged_opportunities`/
+      `save_html` sequence `cmd_central` already used, just triggered
+      automatically. Since every `capture`/`attach`/`propose`/`sync`
+      call already routes through `_sync_to_central`, the merged root
+      `graph.html` is now current after ANY of those, from ANY project,
+      with no separate step -- same "no server, just always-fresh
+      files" philosophy the per-project mirror already established,
+      just finally applied to the merged view too. `cmd_central` and
+      `cmd_open`'s merged-view fallback (step 31) were both refactored
+      to call the same helper instead of duplicating the merge logic
+      inline. There's no standalone merged `graph.json` on disk (only
+      `graph.html`, with the data embedded inline) -- the helper returns
+      the merged `Graph` object directly so callers that need the count
+      don't have to re-derive it.
+    - Also added a second, complementary fix for a still-open browser
+      tab specifically: an opt-in **live** toggle in the dashboard header
+      (next to the theme toggle, same visual language, persisted the
+      same way via localStorage) that just does `location.reload()`
+      every 20s when enabled. Off by default -- this is deliberately the
+      simplest possible mechanism (a periodic full reload, not a
+      websocket/SSE/polling-fetch architecture) since the file itself is
+      now always current the moment anything changes; the only thing a
+      stale open tab was missing was the reload itself.
+    - 2 new tests
+      (`test_capture_keeps_merged_central_html_live_without_a_separate_command`,
+      `test_render_html_has_live_refresh_toggle`) -- 146 tests total.
+      Verified the toggle visually with headless Chrome (dispatches a
+      click, confirms the active/gold state applies).
+
 Each step should land, get tested, and get dogfooded (per SEED.md §6
 Layer 7) before the next starts — same discipline as the v0 build.

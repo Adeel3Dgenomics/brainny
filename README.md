@@ -281,6 +281,12 @@ is a single self-contained file — no server, works offline:
 - **Brain** — edge-bundled mesh + a probe that gathers a live report
 - **Network** — the central brain + a small brain per connected project
 - a day/night theme toggle, top-right, in every tab
+- an opt-in **live** toggle next to it — every `capture`/`attach`/
+  `propose`/`sync` already keeps `graph.html` current the moment it
+  happens (including the merged view at your central folder's root, not
+  just each project's own copy), so a still-open tab only needs the
+  reload itself; turn this on to get that automatically every 20s
+  instead of hitting refresh by hand
 
 ```bash
 brainny status              # counts, domains, last capture, sync state

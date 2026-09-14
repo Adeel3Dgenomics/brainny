@@ -879,6 +879,48 @@ def test_capture_twice_keeps_central_mirror_current(tmp_path, capsys):
     assert "(in sync)" in capsys.readouterr().out
 
 
+def _merged_central_node_count(central: Path) -> int:
+    # there's no standalone merged graph.json on disk -- only graph.html,
+    # with the merged payload embedded inline (see _rebuild_merged_central_html) --
+    # so reading the merge back means pulling it out of that HTML, same as
+    # test_viz.py's _extract_payload does for a single project's dashboard.
+    import json
+    import re
+
+    html = (central / "graph.html").read_text(encoding="utf-8")
+    m = re.search(r'<script id="brainny-data" type="application/json">(.*?)</script>', html, re.S)
+    assert m, "brainny-data payload script not found in merged central graph.html"
+    return len(json.loads(m.group(1))["nodes"])
+
+
+def test_capture_keeps_merged_central_html_live_without_a_separate_command(tmp_path, capsys):
+    # a real user hit this: refreshing <central>/graph.html in a browser
+    # and seeing nothing change, because that file was only ever written
+    # by an explicit `brainny central`/`open --central` call -- every
+    # capture (and attach/propose/sync) that mirrors to central should
+    # also keep the MERGED view current, with no separate step needed.
+    central = tmp_path / "central"
+    main(["config", "set-central", str(central)])
+    capsys.readouterr()
+
+    main([
+        "--out-dir", str(tmp_path / "out-a"), "capture", str(FIXTURES / "sample_entries.json"),
+        "--project", "proja", "--session", "s1",
+    ])
+    capsys.readouterr()
+    assert (central / "graph.html").exists()  # written on the very first mirror, no `brainny central` ever run
+    assert _merged_central_node_count(central) == 2  # sample_entries.json has 2 entries
+
+    extra = tmp_path / "extra.json"
+    extra.write_text('[{"kind": "insight", "title": "t3", "summary": "s3", "domain": "d"}]', encoding="utf-8")
+    main(["--out-dir", str(tmp_path / "out-b"), "capture", str(extra), "--project", "projb", "--session", "s1"])
+    capsys.readouterr()
+
+    # a capture in a SECOND, unrelated project also refreshes the merge --
+    # it now reflects both projects, not just the one that just captured
+    assert _merged_central_node_count(central) == 3
+
+
 def test_attach_auto_mirrors_to_central_when_configured(tmp_path, capsys):
     out_dir = tmp_path / "out"
     capture(FIXTURES / "sample_entries.json", project="myproj", session="s1", out_dir=out_dir)
