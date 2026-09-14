@@ -467,10 +467,17 @@ def cmd_open(args: argparse.Namespace) -> int:
         print(f"brainny: opened {path} (central copy of '{project}')")
         return 0
 
+    # generate on the spot if it doesn't exist yet -- including on a
+    # totally fresh install with nothing captured, which renders a real
+    # (if empty) dashboard explaining what to do next, rather than a CLI
+    # error telling the user to run a different command first. Once
+    # anything has been captured, capture/attach/sync/propose already
+    # keep this file current on every call, so this is just filling the
+    # one real gap: day one, before the first capture.
+    graph = load_graph(out_dir)
     path = html_path(out_dir)
     if not path.exists():
-        print(f"brainny: {path} doesn't exist yet - run `brainny query --html` first.", file=sys.stderr)
-        return 1
+        path = save_html(graph, out_dir)
     webbrowser.open(path.resolve().as_uri())
     print(f"brainny: opened {path}")
     return 0
@@ -844,7 +851,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_recent.add_argument("--days", type=int, default=7)
     p_recent.set_defaults(func=cmd_recent)
 
-    p_open = sub.add_parser("open", help="open graph.html in the default browser")
+    p_open = sub.add_parser(
+        "open", help="open the dashboard in your browser (generates it first if needed)"
+    )
     p_open.add_argument(
         "--central", action="store_true",
         help="open the configured central folder's copy instead of the local one",

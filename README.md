@@ -251,17 +251,26 @@ brainny propose opportunities.json --project myproj --session s1
 **2. See what you've kept:**
 
 ```bash
+brainny open                  # the one command: opens the dashboard, generating it first if needed
+```
+
+That's it — `brainny open` works from the very first run, even before
+you've captured anything (you'll get a real, empty dashboard explaining
+what to do next, not an error). See it above for what it actually looks
+like once there's something in it. The dashboard (`brainny-out/graph.html`)
+is a single self-contained file — no server, works offline:
+- **Graph** — radial tree / force network, click-to-inspect
+- **Stats** — domain treemap, growth trends, kind + origin breakdown
+- **Opportunities** — AI-proposed combinations of ideas
+- **Brain** — edge-bundled mesh + a probe that gathers a live report
+- **Network** — the central brain + a small brain per connected project
+- a day/night theme toggle, top-right, in every tab
+
+```bash
 brainny status              # counts, domains, last capture, sync state
-brainny query                # your ideas as a terminal tree
-brainny query --html          # a browsable dashboard: brainny-out/graph.html
-                                #   Graph tab: radial tree / force network, click-to-inspect
-                                #   Stats tab: domain treemap, growth trends, kind + origin breakdown
-                                #   Opportunities tab: AI-proposed combinations of ideas
-                                #   Brain tab: edge-bundled mesh + a probe that gathers a live report
-                                #   Network tab: the central brain + a small brain per connected project
-                                #   day/night theme toggle, top-right, in every tab
-brainny open                  # open that dashboard in your browser
-brainny open --central          # ...or the central folder's copy of this project instead
+brainny query                # your ideas as a terminal tree, no browser needed
+brainny query --html          # just (re)write brainny-out/graph.html, without opening it
+brainny open --central          # open the central folder's copy of this project instead
 brainny open --central --project X  # ...or an explicit project's central copy, from anywhere
 brainny search "docker"        # find anything by keyword, tag, domain, kind
 brainny recall retry api client  # search THIS project + every project in your central folder

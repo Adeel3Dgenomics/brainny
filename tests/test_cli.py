@@ -214,10 +214,20 @@ def test_recent_respects_day_window(tmp_path, capsys):
     assert "nothing captured" in capsys.readouterr().out
 
 
-def test_open_fails_cleanly_when_no_html(tmp_path, capsys):
-    code = main(["--out-dir", str(tmp_path / "out"), "open"])
-    assert code == 1
-    assert "doesn't exist yet" in capsys.readouterr().err
+def test_open_generates_dashboard_on_first_run(tmp_path, capsys, monkeypatch):
+    # the very first thing a brand-new install would do: nothing captured
+    # yet, brainny-out/ doesn't even exist -- `brainny open` must still
+    # work, generating a real (empty-state) dashboard rather than telling
+    # the user to run a different command first.
+    out_dir = tmp_path / "out"
+    opened = {}
+    monkeypatch.setattr("webbrowser.open", lambda url: opened.setdefault("url", url))
+
+    code = main(["--out-dir", str(out_dir), "open"])
+    assert code == 0
+    assert opened["url"].startswith("file:")
+    assert (out_dir / "graph.html").exists()
+    assert "No ideas captured yet" in (out_dir / "graph.html").read_text(encoding="utf-8")
 
 
 def test_open_launches_browser(tmp_path, capsys, monkeypatch):

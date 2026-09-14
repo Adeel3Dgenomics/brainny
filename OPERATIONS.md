@@ -1162,5 +1162,36 @@ permission-gated local check — see above.
       it only fires if this exact check hasn't already run for this
       project earlier in the same session.
 
+29. `brainny open` now just works, day one. ✅
+    - User's ask: "easy to setup, easy to use, and easy to open the
+      dashboard... once install he will have his dashboard easy to open
+      and lookup, he will be able to see it." Audited the actual first-
+      run path rather than guessing: install is already about as simple
+      as it gets short of a PyPI publish (a deliberately deferred, larger
+      decision noted in Status, not touched here); `graph.html` was
+      already kept fresh automatically after every `capture`/`attach`/
+      `propose`/`sync` call (each already calls `save_html()`) -- so the
+      one real gap was `brainny open` itself: on a brand-new install,
+      before the very first capture, it printed an error telling the
+      user to go run a *different* command first, instead of just
+      showing them something.
+    - Fix: `cmd_open` generates the dashboard on the spot
+      (`save_html(load_graph(out_dir), out_dir)`) if `graph.html` doesn't
+      exist yet, then opens it -- including with zero ideas captured,
+      which renders the real "No ideas captured yet, run `brainny
+      capture`" empty state rather than a CLI error. `--central` keeps
+      its existing precondition (a central copy only exists after this
+      project has actually synced at least once) since auto-syncing
+      would be a real write into a shared folder, a meaningfully bigger
+      and more surprising side effect than just rendering a view --
+      `open` should stay a read-only command.
+    - README's "see what you've kept" section restructured to lead with
+      `brainny open` as the one command to remember, moving `brainny
+      query --html` (write the file without opening a browser) to a
+      secondary note rather than the first thing shown.
+    - Updated `test_open_fails_cleanly_when_no_html` (asserted the old,
+      now-wrong behavior) into `test_open_generates_dashboard_on_first_run`
+      -- 141 tests total, same count (a straight swap, not an addition).
+
 Each step should land, get tested, and get dogfooded (per SEED.md §6
 Layer 7) before the next starts — same discipline as the v0 build.
