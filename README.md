@@ -306,6 +306,10 @@ brainny recent --days 7          # what you've captured lately
   nothing, and that's correct;
 - once, at the start of the session, check whether anything's drifted
   from your shared central brain and ask before syncing it;
+- once per session, give the project's already-captured ideas one free
+  look for genuine combinations worth proposing as an Opportunity —
+  the same judgment `/brainny-synthesize` does by hand, just automatic;
+  silent on the common outcome (nothing clears the bar);
 - right after your first message, quietly check whether anything you've
   captured before — in *this* project or any other one synced to your
   central brain — is relevant to what you're about to do, and mention it
@@ -327,6 +331,8 @@ moment, every time.
 | `/brainny-onboarding` | automatically, once ever per machine | offers to set up a new central folder, or download an existing one, plus optional GitHub, on first use |
 | `/brainny-recall` | automatically, once per session, after your first message | surfaces anything relevant you've captured before — in this project or any other one — before the task starts |
 | `/brainny-synthesize [focus]` | manually, whenever you want to check | reviews everything captured in the project for genuine combinations, proposing each with an honest confidence weight via `brainny propose` |
+| `/brainny-propose-check` | automatically, once per session | the ambient version of `/brainny-synthesize` above — same judgment, ambient framing (silent unless something clears the bar) |
+| `/brainny-extract <path> [focus]` | manually, whenever you want to mine a repo | reads through one or more *existing* repos (no live session needed) for the same kinds of ideas every other capture skill looks for; explicitly expensive, so it only ever runs on request |
 
 All of these are installed globally, once, and then work in any project.
 
