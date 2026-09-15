@@ -292,15 +292,15 @@ _CSS = """
   #brand-icon { width: 28px; height: 28px; object-fit: contain; flex: none; }
   header h1 { margin: 0; font-size: 1.15rem; }
   header p { margin: 0.35rem 0 0; color: var(--text-dimmer); font-size: 0.82rem; }
-  #view-select {
+  #view-select, #cluster-select {
     background: rgba(var(--overlay-rgb),0.06); border: 1px solid rgba(var(--overlay-rgb),0.16); color: var(--fg);
     padding: 0.3rem 0.6rem; border-radius: 8px; font: inherit; font-size: 0.85rem; cursor: pointer;
   }
-  #view-select:hover { background: rgba(var(--overlay-rgb),0.1); }
+  #view-select:hover, #cluster-select:hover { background: rgba(var(--overlay-rgb),0.1); }
   /* the dropdown's open popup is native-rendered by the OS, outside CSS
      theme control -- force it light-with-dark-text always, a universal
      fallback that stays readable regardless of the page's own theme */
-  #view-select option { color: #111; background: #fff; }
+  #view-select option, #cluster-select option { color: #111; background: #fff; }
   .note {
     margin: 0.6rem 0 0; padding: 0.6rem 0.8rem; border-radius: 8px;
     background: rgba(232,178,61,0.08); border: 1px solid rgba(232,178,61,0.25);
@@ -668,7 +668,28 @@ _JS = """
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
-  // domain path ("GWAS / sub-analysis") -> nested {name, kind, children}
+  // Which field to group ideas by, in both the tree/force views and the
+  // itemized list below them -- 'domain' is the only one with real
+  // sub-branches (a "GWAS / sub-analysis" path splits on "/"); 'kind' and
+  // 'tags' are flat, single-level groupings. Persisted across reloads the
+  // same way theme/live-refresh are.
+  var CLUSTER_LABELS = { domain: 'domain', kind: 'kind', tags: 'primary tag' };
+  var clusterBy = 'domain';
+  try {
+    var savedCluster = localStorage.getItem('brainny-cluster-by');
+    if (savedCluster && CLUSTER_LABELS[savedCluster]) clusterBy = savedCluster;
+  } catch (e) { /* private browsing etc -- just won't persist */ }
+
+  // path segments an idea belongs under, for the current `clusterBy`.
+  // Only 'domain' ever returns more than one segment (its "/" convention);
+  // 'kind' and 'tags' are flat, so every idea sits one level below root.
+  function clusterPath(idea) {
+    if (clusterBy === 'kind') return [idea.kind];
+    if (clusterBy === 'tags') return [(idea.tags && idea.tags.length) ? idea.tags[0] : 'untagged'];
+    return idea.domain.split('/').map(function (p) { return p.trim(); }).filter(Boolean);
+  }
+
+  // groups ideas by the current `clusterBy` -> nested {name, kind, children}
   // tree, d3.hierarchy()-ready. Leaves carry the idea + its potentialScore
   // as `value` (branch/root nodes leave value undefined so d3's .sum()
   // aggregates bottom-up from real leaves only).
@@ -688,7 +709,7 @@ _JS = """
     }
 
     data.nodes.forEach(function (idea) {
-      var parts = idea.domain.split('/').map(function (p) { return p.trim(); }).filter(Boolean);
+      var parts = clusterPath(idea);
       var parent = parts.length ? ensureBranch(parts) : root;
       parent.children.push({
         id: itemKey(idea), name: idea.title, kind: 'idea', idea: idea,
@@ -704,14 +725,28 @@ _JS = """
     return root;
   }
 
+  // the grouping key for the itemized list below -- kept independent of
+  // clusterPath() above (which splits domain into "/" sub-branches for the
+  // tree/force views): the list has always shown one flat group per full
+  // domain string, and changing that for the 'domain' case would be a
+  // needless behavior change for the common, default clustering.
+  function groupKeyOf(idea) {
+    if (clusterBy === 'kind') return idea.kind;
+    if (clusterBy === 'tags') return (idea.tags && idea.tags.length) ? idea.tags[0] : 'untagged';
+    return idea.domain;
+  }
+
   // ---- itemized accordion list (click a title to unfold) ----
   function renderDomainGroups(container, ideas) {
     var byDomain = {};
-    ideas.forEach(function (n) { (byDomain[n.domain] = byDomain[n.domain] || []).push(n); });
+    ideas.forEach(function (n) { (byDomain[groupKeyOf(n)] = byDomain[groupKeyOf(n)] || []).push(n); });
 
     Object.keys(byDomain).sort().forEach(function (domain) {
       var group = document.createElement('div');
       group.className = 'item-group';
+      // only meaningful (and only relied on) when clusterBy === 'domain' --
+      // see scrollToDomainGroup(), which forces that clustering before
+      // using this attribute to jump here from the Stats tab.
       group.dataset.domain = domain;
       var heading = document.createElement('div');
       heading.className = 'item-group-heading';
@@ -853,8 +888,8 @@ _JS = """
   var descEl = document.getElementById('view-desc');
 
   var DESCRIPTIONS = {
-    radial: 'Domains as branches radiating from the center; ideas as leaves at the rim. Simplest to scan for hierarchy.',
-    force: 'Physics-based layout with an explicit colored halo per domain group, instead of relying on link topology alone to imply grouping.',
+    radial: 'Groups as branches radiating from the center; ideas as leaves at the rim. Simplest to scan for hierarchy.',
+    force: 'Physics-based layout with an explicit colored halo per group, instead of relying on link topology alone to imply grouping.',
   };
 
   function showTooltip(event, html) {
@@ -1178,6 +1213,10 @@ _JS = """
 
   function scrollToDomainGroup(domain) {
     switchTab('graph');
+    // the Stats treemap only ever names real domains -- jumping there only
+    // makes sense (and only finds a match) if the list is domain-grouped,
+    // so force that regardless of whatever clustering was active before.
+    setClusterBy('domain');
     setTimeout(function () {
       var group = document.querySelector('.item-group[data-domain="' + CSS.escape(domain) + '"]');
       if (!group) return;
@@ -2115,7 +2154,7 @@ _JS = """
     if (currentCleanup) currentCleanup();
     vizEl.innerHTML = '';
     hideTooltip();
-    descEl.textContent = DESCRIPTIONS[name];
+    descEl.textContent = DESCRIPTIONS[name] + ' Grouped by ' + CLUSTER_LABELS[clusterBy] + '.';
     if (filteredData().nodes.length) {
       currentCleanup = VIEWS[name]();
     } else {
@@ -2132,6 +2171,21 @@ _JS = """
 
   var select = document.getElementById('view-select');
   select.addEventListener('change', function () { switchView(select.value); });
+
+  // ---- cluster-by dropdown: re-groups both the tree/force view above and
+  // the itemized list below -- see clusterPath()/groupKeyOf() above for
+  // what each option actually means per view.
+  var clusterSelect = document.getElementById('cluster-select');
+  clusterSelect.value = clusterBy;
+  function setClusterBy(key) {
+    if (clusterBy === key) return;
+    clusterBy = key;
+    clusterSelect.value = key;
+    try { localStorage.setItem('brainny-cluster-by', key); } catch (e) { /* private browsing etc -- just won't persist */ }
+    refreshItemList();
+    if (currentCleanup || filteredData().nodes.length) switchView(select.value);
+  }
+  clusterSelect.addEventListener('change', function () { setClusterBy(clusterSelect.value); });
 
   var activeTab = 'graph';
   function switchTab(name) {
@@ -2431,6 +2485,11 @@ def render_html(graph: Graph, opportunities: Opportunities | None = None, title:
     <select id="view-select">
       <option value="radial">Radial tree</option>
       <option value="force">Force network with cluster halos</option>
+    </select>
+    <select id="cluster-select" title="Group ideas by this field, in both the graph above and the list below">
+      <option value="domain">Cluster by domain</option>
+      <option value="kind">Cluster by kind</option>
+      <option value="tags">Cluster by primary tag</option>
     </select>
     <button type="button" id="live-toggle" title="Auto-refresh this page every 20s (this file is rewritten on every capture/attach/propose/sync elsewhere)" aria-label="Toggle live auto-refresh">&#8635;</button>
     <button type="button" id="theme-toggle" title="Toggle day/night theme" aria-label="Toggle day/night theme">&#9789;</button>

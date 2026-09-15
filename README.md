@@ -275,7 +275,9 @@ you've captured anything (you'll get a real, empty dashboard explaining
 what to do next, not an error). See it above for what it actually looks
 like once there's something in it. The dashboard (`brainny-out/graph.html`)
 is a single self-contained file — no server, works offline:
-- **Graph** — radial tree / force network, click-to-inspect
+- **Graph** — radial tree / force network, click-to-inspect; a **cluster by**
+  dropdown re-groups both it and the itemized list below by domain
+  (default), kind, or primary tag, remembered across reloads
 - **Stats** — domain treemap, growth trends, kind + origin breakdown
 - **Opportunities** — AI-proposed combinations of ideas
 - **Brain** — edge-bundled mesh + a probe that gathers a live report

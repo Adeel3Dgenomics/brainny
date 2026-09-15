@@ -131,6 +131,22 @@ def test_render_html_has_network_tab():
     assert "setActiveProject" in out
 
 
+def test_render_html_has_cluster_by_dropdown():
+    # the Graph tab's tree/force views and itemized list were hardcoded to
+    # group by domain only -- a real user asked for other groupings (kind,
+    # tags), so this dropdown picks the field, persisted via localStorage
+    # the same way theme/live-refresh already are.
+    out = render_html(Graph())
+    assert 'id="cluster-select"' in out
+    assert '<option value="domain">Cluster by domain</option>' in out
+    assert '<option value="kind">Cluster by kind</option>' in out
+    assert '<option value="tags">Cluster by primary tag</option>' in out
+    assert "brainny-cluster-by" in out
+    assert "function setClusterBy" in out
+    assert "function clusterPath" in out
+    assert "function groupKeyOf" in out
+
+
 def test_render_html_has_live_refresh_toggle():
     # opt-in, off by default -- a real user hit the "why doesn't this page
     # ever update on its own" confusion, and this is the client-side half

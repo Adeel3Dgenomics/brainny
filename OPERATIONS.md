@@ -1479,5 +1479,60 @@ permission-gated local check — see above.
       and the flag being omitted is confirmed to leave the file
       completely untouched (still requires the explicit ask). 153 passed.
 
+37. Feature: cluster-by choice box -- group the Graph tab by kind or
+    primary tag, not only domain. ✅
+    - Real user ask: "the clustering of the ideas should be more
+      improved... maybe we can cluster by choice box like clustering by
+      input, aim, subject and so on." Investigating turned up that
+      `buildHierarchy()` (the radial tree + force-halo view) and the
+      itemized accordion list below them were both hardcoded to group by
+      `domain` only -- `kind`/`origin`/`project` already existed as
+      *filters* (narrowing which ideas show), but nothing let you
+      re-group the tree itself by them.
+    - Asked the user which fields to add (AskUserQuestion): they picked
+      **kind**, elaborating that they wanted groupings like "those
+      related to analysis, those related to troubleshooting, those to
+      avoid mistakes" -- which is almost exactly what the existing `kind`
+      enum already means (`technique` ~ analysis/method, `solution` ~
+      troubleshooting, `precaution` ~ avoid mistakes), so clustering by
+      kind serves that ask directly without inventing a new taxonomy.
+      Also confirmed **tags** should be included, with multi-tagged
+      ideas filed under their **first tag only** (not duplicated across
+      every tag) -- keeps the tree a clean partition. Origin/project
+      weren't requested, so left out of this pass (the design makes
+      adding either later, e.g. for the merged central view, cheap).
+    - `viz.py`: `buildHierarchy()`'s domain-only leaf placement replaced
+      by `clusterPath(idea)`, switched on a new `clusterBy` variable
+      (`'domain'` | `'kind'` | `'tags'`) -- only `'domain'` still splits
+      on `/` into real sub-branches; `kind`/`tags` are flat, single-level
+      groupings. New `#cluster-select` dropdown next to the existing
+      radial/force `#view-select`, persisted via `localStorage` the same
+      way theme/live-refresh already are. The itemized list below the
+      graph got its own `groupKeyOf()` (kept deliberately independent of
+      `clusterPath()`'s domain-splitting, so the default/common case --
+      clustering by domain -- renders exactly as it always has, no
+      behavior change for the common path).
+    - One coupling had to be handled explicitly: the Stats tab's domain
+      treemap jumps to `.item-group[data-domain="X"]` in the list, which
+      only resolves correctly when the list is actually domain-grouped.
+      `scrollToDomainGroup()` now calls `setClusterBy('domain')` first,
+      forcing the clustering back before scrolling, so a Stats-tab jump
+      can never land on a dead click just because kind/tag clustering was
+      left active from an earlier visit.
+    - Verified visually with headless Chrome (via Playwright driving the
+      system-installed Chrome, no bundled browser download) on a 7-idea
+      sample spanning multiple kinds/tags/domains: radial tree and force
+      network both re-group correctly under kind and tags, the
+      description caption's "Grouped by ..." suffix updates live, the
+      cluster choice persists across a reload, and the Stats-tab jump
+      correctly forces the dropdown back to domain before scrolling.
+      `DESCRIPTIONS`' view text also had "Domains as branches..."/
+      "...halo per domain group" hardcoded, silently wrong once another
+      field was selected -- reworded to "Groups as branches..."/"...halo
+      per group" so it stays accurate regardless of `clusterBy`.
+    - New test in `test_viz.py` covers the dropdown, its three options,
+      and the persistence key being present in the rendered HTML. 154
+      passed.
+
 Each step should land, get tested, and get dogfooded (per SEED.md §6
 Layer 7) before the next starts — same discipline as the v0 build.
