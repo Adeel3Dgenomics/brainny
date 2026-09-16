@@ -1,6 +1,6 @@
 [project]
 name = "brainny"
-version = "0.1.0"
+version = "0.1.1"
 description = "brAInny catches your ideas before the wind — techniques, precautions, and insights that would otherwise evaporate at the end of a session."
 readme = "README.md"
 requires-python = ">=3.10"

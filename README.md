@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/icon.png" alt="brAInny" width="150" />
+<img src="https://raw.githubusercontent.com/AlsammanAlsamman/brainny/master/assets/icon.png" alt="brAInny" width="150" />
 
 # br<font color="#e8b23d">AI</font>nny
 
@@ -19,7 +19,7 @@
 > and watch what you know actually compound, session after session.**
 
 <p align="center">
-  <img src="assets/flowchart.jpg" alt="brAInny flow: an AI session generates an idea, brAInny catches it, saves it locally, syncs it to your private GitHub repo, and a future AI session recalls it automatically" width="100%">
+  <img src="https://raw.githubusercontent.com/AlsammanAlsamman/brainny/master/assets/flowchart.jpg" alt="brAInny flow: an AI session generates an idea, brAInny catches it, saves it locally, syncs it to your private GitHub repo, and a future AI session recalls it automatically" width="100%">
 </p>
 
 **[What it does](#the-problem-this-solves) ·
@@ -109,19 +109,19 @@ any assistant that can read an instruction file and run a shell command
 can drive brainny the same way.
 
 <p align="center">
-  <img src="assets/screenshot-dashboard.png" alt="brAInny dashboard: force-directed network of captured ideas with a colored halo per domain cluster, a human/AI/collaborative origin filter, and an itemized list alongside" width="100%">
+  <img src="https://raw.githubusercontent.com/AlsammanAlsamman/brainny/master/assets/screenshot-dashboard.png" alt="brAInny dashboard: force-directed network of captured ideas with a colored halo per domain cluster, a human/AI/collaborative origin filter, and an itemized list alongside" width="100%">
 </p>
 
 <p align="center"><sub>Graph tab — force network with cluster halos. The row of pills under the tabs filters by who originated each idea.</sub></p>
 
 <p align="center">
-  <img src="assets/screenshot-stats.png" alt="brAInny dashboard Stats tab: domain treemap, per-cluster activity table, kind breakdown, origin breakdown, and newest ideas" width="100%">
+  <img src="https://raw.githubusercontent.com/AlsammanAlsamman/brainny/master/assets/screenshot-stats.png" alt="brAInny dashboard Stats tab: domain treemap, per-cluster activity table, kind breakdown, origin breakdown, and newest ideas" width="100%">
 </p>
 
 <p align="center"><sub>Stats tab — domain treemap, growth trends, kind + origin breakdown.</sub></p>
 
 <p align="center">
-  <img src="assets/screenshot-opportunities.png" alt="brAInny dashboard Opportunities tab: three AI-proposed combinations of ideas, each with a kind badge, a confidence-weight bar, a summary and rationale, and links back to the ideas they're built from" width="100%">
+  <img src="https://raw.githubusercontent.com/AlsammanAlsamman/brainny/master/assets/screenshot-opportunities.png" alt="brAInny dashboard Opportunities tab: three AI-proposed combinations of ideas, each with a kind badge, a confidence-weight bar, a summary and rationale, and links back to the ideas they're built from" width="100%">
 </p>
 
 <p align="center"><sub>Opportunities tab — AI-proposed combinations, sorted by confidence weight, linked back to the ideas each one draws from.</sub></p>
@@ -136,7 +136,7 @@ live scrolling report as it passes. Click anywhere to open the mesh into
 real, labeled, clickable idea circles.
 
 <p align="center">
-  <img src="examples/demo/brain-preview.gif" alt="Animated preview of brainny's Brain tab on the same 50-idea example dataset: hierarchical edge-bundled connections forming a brain silhouette, with an old-style robot probe circling it and an Opportunity lit up in the mesh" width="100%">
+  <img src="https://raw.githubusercontent.com/AlsammanAlsamman/brainny/master/examples/demo/brain-preview.gif" alt="Animated preview of brainny's Brain tab on the same 50-idea example dataset: hierarchical edge-bundled connections forming a brain silhouette, with an old-style robot probe circling it and an Opportunity lit up in the mesh" width="100%">
 </p>
 
 <p align="center"><sub>Brain tab — same 50-idea example dataset as the screenshots above, not a mockup. Every view, including this one, has a day/night toggle (top-right) that defaults to your system's preference and remembers your choice.</sub></p>
@@ -152,7 +152,7 @@ Click a project to filter the whole dashboard to it (the same filter the
 clear it.
 
 <p align="center">
-  <img src="assets/screenshot-network.png" alt="brAInny dashboard Network tab: a central brain hub in the middle connected to ten smaller project brains of varying sizes, each linked back to the hub and sized by its idea count" width="100%">
+  <img src="https://raw.githubusercontent.com/AlsammanAlsamman/brainny/master/assets/screenshot-network.png" alt="brAInny dashboard Network tab: a central brain hub in the middle connected to ten smaller project brains of varying sizes, each linked back to the hub and sized by its idea count" width="100%">
 </p>
 
 <p align="center"><sub>Network tab — a separate, fabricated example central folder with 10 projects (built by calling brainny's own capture/merge functions directly, not hand-edited JSON), so there's actually enough connected to be worth looking at.</sub></p>
@@ -165,25 +165,26 @@ attachments, snippets, and 6 proposed Opportunities) — built to show the
 full dashboard, not the maintainer's real ideas. **Want to click around
 it yourself, not just look at screenshots?**
 [Open the live example dashboard](https://htmlpreview.github.io/?https://raw.githubusercontent.com/AlsammanAlsamman/brainny/master/examples/demo/graph.html) —
-see [`examples/demo/`](examples/demo/).
+see [`examples/demo/`](https://github.com/AlsammanAlsamman/brainny/tree/master/examples/demo).
 
 ---
 
 ## Install
 
 ```bash
+pip install brainny
+```
+
+That puts a `brainny` command on your PATH — usable from **any** project
+directory. `python -m brainny` and `python -m brainny.cli` both work too.
+
+Working on brainny itself, or want the dev/test dependencies?
+
+```bash
 git clone https://github.com/AlsammanAlsamman/brainny
 cd brainny
 pip install -e ".[dev]"
 ```
-
-That puts a `brainny` command on your PATH — usable from **any** project
-directory, not just this repo — plus the importable `brainny` package.
-(Not published to PyPI yet — the name is confirmed free, publishing is
-just a deliberate later step.)
-
-`python -m brainny` and `python -m brainny.cli` both work too, from any
-directory (including the parent of your clone).
 
 **Windows note.** With the Microsoft Store build of Python, the `Scripts`
 directory that receives `brainny.exe` is often *not* on `PATH` — pip prints a
@@ -426,7 +427,7 @@ brainny badge --out assets/badge.svg # write it somewhere specific
 ```
 
 <p align="center">
-  <img src="assets/badge-example.svg" alt="brAInny activity badge: a brain icon with curved branches leading to small labeled counts for skills, techniques, precautions, projects, and recent activity" width="70%">
+  <img src="https://raw.githubusercontent.com/AlsammanAlsamman/brainny/master/assets/badge-example.svg" alt="brAInny activity badge: a brain icon with curved branches leading to small labeled counts for skills, techniques, precautions, projects, and recent activity" width="70%">
 </p>
 
 Nothing gets uploaded anywhere — `brainny badge` only ever writes a local
